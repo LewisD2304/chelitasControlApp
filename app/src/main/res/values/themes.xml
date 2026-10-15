@@ -1,10 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.ChelasApp" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Customize your light theme here. -->
+    <!-- Tema base de la aplicación -->
+    <style name="Base.Theme.ChelasApp" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
     <style name="Theme.ChelasApp" parent="Base.Theme.ChelasApp" />
+
+    <!-- Splash Screen Theme: Esto oculta la "Imagen 1" -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Fondo verde idéntico al de tu animación -->
+        <item name="windowSplashScreenBackground">#174E38</item>
+        <!-- Usamos el icono transparente para que NO aparezca el logo estático -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/transparent_icon</item>
+        <!-- El tema al que cambiará la app después de cargar -->
+        <item name="postSplashScreenTheme">@style/Theme.ChelasApp</item>
+    </style>
 </resources>

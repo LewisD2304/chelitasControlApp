@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Fondo verde idéntico al de tu animación -->
+        <item name="android:windowSplashScreenBackground">#174E38</item>
+
+        <!-- Usamos un icono transparente para eliminar el logo estático de la "Imagen 1" -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_icon</item>
+
+        <!-- Forzamos al sistema a que no espere nada y entregue el control a tu animación -->
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+
+        <item name="postSplashScreenTheme">@style/Theme.ChelasApp</item>
+    </style>
+</resources>

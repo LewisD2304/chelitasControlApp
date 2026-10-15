@@ -15,6 +15,9 @@ interface BusinessDao {
     @Query("SELECT * FROM jornadas ORDER BY date DESC")
     fun getAllJornadas(): Flow<List<Jornada>>
 
+    @Query("SELECT * FROM jornadas WHERE date = :date LIMIT 1")
+    suspend fun getJornadaByDate(date: String): Jornada?
+
     @Query("SELECT * FROM jornadas WHERE isClosed = 0 LIMIT 1")
     fun getActiveJornada(): Flow<Jornada?>
 
@@ -27,8 +30,11 @@ interface BusinessDao {
     @Query("SELECT * FROM ventas WHERE date = :date ORDER BY id DESC")
     fun getSalesByDate(date: String): Flow<List<Venta>>
 
-    @Insert
-    suspend fun insertSale(venta: Venta)
+    @Query("SELECT * FROM ventas WHERE id = :id")
+    suspend fun getSaleById(id: Long): Venta?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSale(venta: Venta)
 
     @Query("SELECT * FROM compras ORDER BY id DESC")
     fun getAllPurchases(): Flow<List<Compra>>
@@ -54,11 +60,17 @@ interface BusinessDao {
     @Query("SELECT * FROM apuntes ORDER BY id DESC")
     fun getAllNotes(): Flow<List<Apunte>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNote(apunte: Apunte)
+
     @Insert
-    suspend fun insertNote(apunte: Apunte)
+    suspend fun insertAudit(audit: SaleAudit)
+
+    @Query("SELECT * FROM sale_audits WHERE saleId = :saleId ORDER BY id DESC")
+    fun getAuditsForSale(saleId: Long): Flow<List<SaleAudit>>
 }
 
-@Database(entities = [BusinessConfig::class, Jornada::class, Venta::class, Compra::class, Gasto::class, Abono::class, Apunte::class], version = 1, exportSchema = false)
+@Database(entities = [BusinessConfig::class, Jornada::class, Venta::class, Compra::class, Gasto::class, Abono::class, Apunte::class, SaleAudit::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun businessDao(): BusinessDao
 }

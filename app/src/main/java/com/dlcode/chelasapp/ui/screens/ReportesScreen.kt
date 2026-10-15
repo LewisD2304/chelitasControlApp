@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.dlcode.chelasapp.model.BusinessConfig
+import com.dlcode.chelasapp.model.HelpDefinitions
 import com.dlcode.chelasapp.ui.components.*
+import com.dlcode.chelasapp.ui.navigation.Screen
 import com.dlcode.chelasapp.ui.theme.*
 import com.dlcode.chelasapp.viewmodel.BusinessViewModel
 import java.text.SimpleDateFormat
@@ -30,12 +34,13 @@ fun ReportesScreen(
     val allExpenses by viewModel.allExpenses.collectAsState()
     val config by viewModel.config.collectAsState()
     val activeJornada by viewModel.activeJornada.collectAsState()
+    val inventoryState by viewModel.inventoryState.collectAsState()
     
     val safeConfig = config ?: BusinessConfig()
     
     var period by remember { mutableIntStateOf(0) } // 0: Día, 1: 7 días, 2: Mes
+    var helpKey by remember { mutableStateOf<String?>(null) }
     
-    val calendar = Calendar.getInstance()
     val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val today = activeJornada?.date ?: sdf.format(Date())
     
@@ -43,7 +48,7 @@ fun ReportesScreen(
         val startCalendar = Calendar.getInstance()
         val endDate = today
         
-        when (period) {
+        val list = when (period) {
             0 -> allSales.filter { it.date == today }
             1 -> {
                 startCalendar.add(Calendar.DAY_OF_YEAR, -6)
@@ -56,6 +61,7 @@ fun ReportesScreen(
             }
             else -> emptyList()
         }
+        list.filter { it.status == "active" }
     }
     
     val filteredExpenses = remember(allExpenses, period, today) {
@@ -82,8 +88,7 @@ fun ReportesScreen(
     val boxesSold = filteredSales.sumOf { it.boxes }
     val bottlesSold = filteredSales.sumOf { it.bottles }
     val totalUnits = filteredSales.sumOf { it.units }
-    val utilidadBruta = totalVendido - totalCost
-    val resultadoEstimado = utilidadBruta - totalExpenses
+    val resultadoEstimado = totalVendido - totalCost - totalExpenses
 
     Column(
         modifier = Modifier
@@ -121,8 +126,8 @@ fun ReportesScreen(
         if (filteredSales.isEmpty() && filteredExpenses.isEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().padding(50.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Sin datos", fontWeight = FontWeight.Bold, color = Ink)
-                    Text("Los indicadores aparecerán al registrar operaciones.", style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text("Sin datos vigentes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Ink)
+                    Text("Anuladas y eliminadas no suman.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         } else {
@@ -130,48 +135,56 @@ fun ReportesScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = DarkGreen),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(21.dp)
             ) {
-                Column(modifier = Modifier.padding(21.dp)) {
-                    Text(text = "VENTAS NETAS", style = MaterialTheme.typography.labelSmall, color = Color(0xFFCDDFC9))
+                Column(modifier = Modifier.padding(22.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        val title = if (period == 0) "GANANCIA ESTIMADA DEL DÍA" else if (period == 1) "GANANCIA ESTIMADA (7 DÍAS)" else "GANANCIA ESTIMADA DEL MES"
+                        Text(text = title, style = MaterialTheme.typography.labelSmall, color = Color(0xFFD9E8D3), fontWeight = FontWeight.Bold)
+                        HelpIconButton(onClick = { helpKey = "result" }, tint = Color(0xFFD9E8D3))
+                    }
                     Text(
-                        text = formatMoney(totalVendido),
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 34.sp, fontWeight = FontWeight.ExtraBold),
-                        color = White,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        text = formatMoney(resultadoEstimado),
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 36.sp),
+                        color = if (resultadoEstimado < 0) Color(0xFFF3CE78) else White,
+                        modifier = Modifier.padding(vertical = 7.dp)
                     )
-                    Text(text = "Incluye ventas fiadas.", style = MaterialTheme.typography.bodySmall, color = Color(0xFFD6EAB2))
+                    Text(text = "Ventas - Costos - Gastos", style = MaterialTheme.typography.bodySmall, color = Color(0xFFD6EAB2))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(13.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Box(modifier = Modifier.weight(1f)) {
+                    MetricCard(label = "Total de ventas realizadas", value = formatMoney(totalVendido), helpKey = "sales", onHelpClick = { helpKey = it })
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    MetricCard(label = "Costo de cervezas vendidas", value = formatMoney(totalCost), helpKey = "gross", onHelpClick = { helpKey = it })
+                }
+            }
+            Spacer(modifier = Modifier.height(11.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Box(modifier = Modifier.weight(1f)) {
+                    MetricCard(label = "Cajas vendidas", value = boxesSold.toString(), helpKey = "boxes", onHelpClick = { helpKey = it })
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    MetricCard(label = "Botellas sueltas", value = bottlesSold.toString(), helpKey = "bottles", onHelpClick = { helpKey = it })
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    MetricCard(label = "Cajas vendidas", value = boxesSold.toString(), helpKey = "boxes")
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    MetricCard(label = "Botellas sueltas", value = bottlesSold.toString(), helpKey = "bottles")
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    MetricCard(label = "Utilidad bruta", value = formatMoney(utilidadBruta), helpKey = "gross")
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    MetricCard(label = "Gastos", value = formatMoney(totalExpenses), helpKey = "expenses")
-                }
-            }
-
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = White),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(17.dp)
             ) {
-                Column(modifier = Modifier.padding(15.dp)) {
-                    SummaryRow("Botellas entregadas", totalUnits.toString())
-                    SummaryRow("Resultado estimado", formatMoney(resultadoEstimado), isBold = true)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SummaryRow("Botellas entregadas", totalUnits.toString(), helpKey = "units", onHelpClick = { helpKey = it })
+                    SummaryRow("Gastos registrados", formatMoney(totalExpenses), helpKey = "expenses", onHelpClick = { helpKey = it })
+                    SummaryRow("Inversión en stock actual", formatMoney(inventoryState.totalValue), helpKey = "stockcost", onHelpClick = { helpKey = it })
                 }
             }
 
@@ -182,9 +195,9 @@ fun ReportesScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = White),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(17.dp)
                 ) {
-                    Column(modifier = Modifier.padding(15.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text("Ventas por fecha · S/", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
                         SalesChart(sales = filteredSales)
@@ -196,9 +209,20 @@ fun ReportesScreen(
         Spacer(modifier = Modifier.height(24.dp))
         SecondaryButton(
             text = "Ver ventas por día",
-            onClick = { navController.navigate(com.dlcode.chelasapp.ui.navigation.Screen.Historial.route) },
+            onClick = { navController.navigate(Screen.Vender.route + "?tab=history") },
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(40.dp))
+    }
+
+    helpKey?.let { key ->
+        HelpDefinitions.definitions[key]?.let { info ->
+            HelpDialog(
+                title = info.title,
+                description = info.description,
+                onDismiss = { helpKey = null }
+            )
+        }
     }
 }
 

@@ -53,6 +53,10 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.icons.extended)
+    implementation(libs.google.gson)
+    
+    // Splash Screen API (Actualizada para mejor compatibilidad)
+    implementation("androidx.core:core-splashscreen:1.2.0")
 
     // Room
     implementation(libs.androidx.room.runtime)

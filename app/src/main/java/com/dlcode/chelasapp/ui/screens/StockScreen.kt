@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.dlcode.chelasapp.model.BusinessConfig
+import com.dlcode.chelasapp.model.HelpDefinitions
 import com.dlcode.chelasapp.ui.components.*
 import com.dlcode.chelasapp.ui.theme.*
 import com.dlcode.chelasapp.viewmodel.BusinessViewModel
@@ -34,6 +35,7 @@ fun StockScreen(
     
     val safeConfig = config ?: BusinessConfig()
     var showPurchaseModal by remember { mutableStateOf(false) }
+    var helpKey by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -61,45 +63,47 @@ fun StockScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = DarkGreen),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(21.dp)
             ) {
-                Column(modifier = Modifier.padding(21.dp)) {
-                    Text(text = "STOCK DISPONIBLE", style = MaterialTheme.typography.labelSmall, color = Color(0xFFCDDFC9))
+                Column(modifier = Modifier.padding(22.dp)) {
+                    Text(text = "STOCK DISPONIBLE", style = MaterialTheme.typography.labelSmall, color = Color(0xFFD9E8D3), fontWeight = FontWeight.Bold)
                     Text(
                         text = formatStock(inventoryState.stock, safeConfig.bottlesPerPack),
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 27.sp, fontWeight = FontWeight.ExtraBold),
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 28.sp),
                         color = White,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 7.dp)
                     )
                     Text(text = "${inventoryState.stock} botellas en total", style = MaterialTheme.typography.bodySmall, color = Color(0xFFD6EAB2))
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(13.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 Box(modifier = Modifier.weight(1f)) {
                     MetricCard(
-                        label = "Valor al costo",
-                        value = formatMoney((inventoryState.stock * inventoryState.averageCost).toLong()),
-                        helpKey = "stockcost"
+                        label = "Inversión en stock",
+                        value = formatMoney(inventoryState.totalValue),
+                        helpKey = "stockcost",
+                        onHelpClick = { helpKey = it }
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     MetricCard(
                         label = "Costo por botella",
-                        value = formatMoney(inventoryState.averageCost.toLong()),
-                        helpKey = "average"
+                        value = formatMoney(if(inventoryState.stock > 0) (inventoryState.totalValue / inventoryState.stock) else 0L),
+                        helpKey = "purchase",
+                        onHelpClick = { helpKey = it }
                     )
                 }
             }
 
-            Text("Compras registradas", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 22.dp, horizontal = 0.dp))
+            Text("Compras registradas", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 24.dp, bottom = 13.dp))
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = White),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(17.dp)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     if (allPurchases.isEmpty()) {
@@ -121,12 +125,14 @@ fun StockScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(13.dp))
             Text(
-                text = "Compras pagadas desde caja, sin depósitos de envases.",
+                text = "Compras pagadas desde caja. El costo de lo vendido se reconoce en tus ganancias.",
                 style = MaterialTheme.typography.labelSmall,
-                color = Muted
+                color = Muted,
+                lineHeight = 16.sp
             )
+            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 
@@ -136,6 +142,16 @@ fun StockScreen(
             onDismiss = { showPurchaseModal = false }
         )
     }
+
+    helpKey?.let { key ->
+        HelpDefinitions.definitions[key]?.let { info ->
+            HelpDialog(
+                title = info.title,
+                description = info.description,
+                onDismiss = { helpKey = null }
+            )
+        }
+    }
 }
 
 @Composable
@@ -144,27 +160,29 @@ fun PurchaseItem(
     packSize: Int,
     showDivider: Boolean
 ) {
-    Column(modifier = Modifier.padding(horizontal = 15.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 13.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
                     text = "${purchase.boxes} cajas + ${purchase.bottles} botellas",
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = Ink
                 )
                 Text(
-                    text = "${purchase.date} · ${purchase.time} · Efectivo",
+                    text = "${formatPrettyDate(purchase.date)} · ${purchase.time}",
                     style = MaterialTheme.typography.labelSmall,
                     color = Muted
                 )
             }
             Text(
                 text = formatMoney(purchase.amount),
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Black,
                 color = Ink
             )
         }
@@ -181,62 +199,64 @@ fun PurchaseModal(
     val inventoryState by viewModel.inventoryState.collectAsState()
     val safeConfig = config ?: BusinessConfig()
     
-    var boxes by remember { mutableStateOf(0) }
-    var bottles by remember { mutableStateOf(0) }
+    var boxes by remember { mutableIntStateOf(0) }
+    var bottles by remember { mutableIntStateOf(0) }
     var amountText by remember { mutableStateOf("") }
     
     val amount = amountText.toDoubleOrNull()?.let { (it * 100).toLong() } ?: 0L
     val unitsToAdd = (boxes * safeConfig.bottlesPerPack) + bottles
 
-    ConfirmDialog(
-        title = "Registrar compra",
-        content = {
-            Column {
-                Text(
-                    text = "San Juan · ${safeConfig.bottlesPerPack} botellas por caja",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Muted
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Registrar compra", style = MaterialTheme.typography.titleLarge) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                     Box(modifier = Modifier.weight(1f)) {
                         StepperField(label = "Cajas", value = boxes, onValueChange = { boxes = it })
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        StepperField(label = "Botellas sueltas", value = bottles, onValueChange = { bottles = it })
+                        StepperField(label = "Botellas", value = bottles, onValueChange = { bottles = it })
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Costo total · S/", style = MaterialTheme.typography.labelSmall)
-                TextField(
+                Spacer(modifier = Modifier.height(13.dp))
+                Text("Costo total · S/", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                MoneyField(
                     value = amountText,
-                    onValueChange = { amountText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                    colors = TextFieldDefaults.colors(focusedContainerColor = White, unfocusedContainerColor = White)
+                    onValueChange = { amountText = it }
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF0DC)),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(13.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = "Ingresarán $unitsToAdd botellas. Quedarán ${formatStock(inventoryState.stock + unitsToAdd, safeConfig.bottlesPerPack)}",
-                        modifier = Modifier.padding(13.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Ink
+                        modifier = Modifier.padding(14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Ink,
+                        lineHeight = 22.sp
                     )
                 }
             }
         },
-        onConfirm = {
-            if (unitsToAdd > 0 && amount > 0) {
-                viewModel.registerPurchase(boxes, bottles, amount)
-                onDismiss()
-            }
+        confirmButton = {
+            PrimaryButton(
+                text = "Guardar compra",
+                enabled = unitsToAdd > 0 && amount > 0,
+                onClick = {
+                    viewModel.registerPurchase(boxes, bottles, amount)
+                    onDismiss()
+                }
+            )
         },
-        onCancel = onDismiss
+        dismissButton = {
+            SecondaryButton(text = "Cancelar", onClick = onDismiss)
+        },
+        containerColor = LightBg,
+        shape = RoundedCornerShape(23.dp)
     )
 }

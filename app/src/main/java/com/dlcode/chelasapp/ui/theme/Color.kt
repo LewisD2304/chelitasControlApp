@@ -5,10 +5,12 @@ import androidx.compose.ui.graphics.Color
 val DarkGreen = Color(0xFF174E38)
 val LightBg = Color(0xFFF5F6EE)
 val Ink = Color(0xFF253D30)
-val Muted = Color(0xFF70806F)
-val Line = Color(0xFFDFE6D7)
-val Amber = Color(0xFFF2CE78)
+val Muted = Color(0xFF63735F)
+val Line = Color(0xFFDCE4D2)
+val Amber = Color(0xFFF3CE78)
 val White = Color(0xFFFFFFFF)
+val RedInfo = Color(0xFFA34535)
+val RedBg = Color(0xFFFFF0EC)
 
 // Apuntes categories
 val OperacionBg = Color(0xFFFFF1CD)

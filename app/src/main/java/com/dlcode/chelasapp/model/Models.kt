@@ -57,7 +57,23 @@ data class Venta(
     val payEfectivo: Long = 0,
     val payYape: Long = 0,
     val payPlin: Long = 0,
-    val payTarjeta: Long = 0
+    val payTarjeta: Long = 0,
+    val status: String = "active", // active, void, deleted
+    val revisionCount: Int = 0,
+    val lastModifiedDate: String? = null,
+    val lastModifiedTime: String? = null
+)
+
+@Entity(tableName = "sale_audits")
+data class SaleAudit(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val saleId: Long,
+    val action: String, // Edición, Anulación, Eliminación
+    val date: String,
+    val time: String,
+    val reason: String,
+    val beforeJson: String,
+    val afterJson: String?
 )
 
 @Entity(tableName = "compras")
@@ -94,11 +110,12 @@ data class Abono(
 data class Apunte(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: String,
-    val category: String,
+    val category: String, // operacion, compra, cliente, recordatorio
     val text: String
 )
 
 data class InventoryState(
     val stock: Int = 0,
+    val totalValue: Long = 0,
     val averageCost: Double = 0.0
 )

@@ -1,21 +1,24 @@
 package com.dlcode.chelasapp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.dlcode.chelasapp.model.BusinessConfig
+import com.dlcode.chelasapp.model.HelpDefinitions
 import com.dlcode.chelasapp.ui.components.*
 import com.dlcode.chelasapp.ui.navigation.Screen
 import com.dlcode.chelasapp.ui.theme.*
@@ -36,6 +39,7 @@ fun CajaScreen(
     val config by viewModel.config.collectAsState()
     
     val safeConfig = config ?: BusinessConfig()
+    var helpKey by remember { mutableStateOf<String?>(null) }
     
     Column(
         modifier = Modifier
@@ -45,11 +49,11 @@ fun CajaScreen(
             .padding(18.dp)
     ) {
         if (activeJornada == null) {
-            AbrirCajaForm(viewModel)
+            AbrirCajaForm(viewModel, onHelpRequest = { helpKey = it })
         } else {
             val jornada = activeJornada!!
             val date = jornada.date
-            val daySales = allSales.filter { it.date == date }
+            val daySales = allSales.filter { it.date == date && it.status == "active" }
             val dayPurchases = allPurchases.filter { it.date == date }
             val dayExpenses = allExpenses.filter { it.date == date }
             val dayAbonos = allAbonos.filter { it.date == date }
@@ -65,28 +69,17 @@ fun CajaScreen(
             val plinTotal = daySales.sumOf { it.payPlin } + dayAbonos.filter { it.method == "Plin" }.sumOf { it.amount }
             val tarjetaTotal = daySales.sumOf { it.payTarjeta } + dayAbonos.filter { it.method == "Tarjeta" }.sumOf { it.amount }
 
-            SuggestionChip(
-                onClick = { },
-                label = { Text(text = "Jornada abierta · $date", color = Color(0xFF52683C)) },
-                colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE4EDCE)),
-                border = null,
+            Surface(
+                color = Color(0xFFE3EDCE),
                 shape = RoundedCornerShape(7.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = White),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-                shape = RoundedCornerShape(16.dp)
             ) {
-                Column(modifier = Modifier.padding(15.dp)) {
-                    SummaryRow("Fondo inicial", formatMoney(jornada.openingCash))
-                    SummaryRow("Ingresos en efectivo", formatMoney(cashSales + cashAbonos))
-                    SummaryRow("Compras", "− ${formatMoney(cashPurchases)}")
-                    SummaryRow("Gastos", "− ${formatMoney(cashExpenses)}")
-                    SummaryRow("Efectivo esperado", formatMoney(expectedCash), isBold = true)
-                }
+                Text(
+                    text = "Caja abierta · ${formatPrettyDate(date)}",
+                    color = Color(0xFF476234),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -94,77 +87,111 @@ fun CajaScreen(
             Card(
                 colors = CardDefaults.cardColors(containerColor = White),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(17.dp)
             ) {
-                Column(modifier = Modifier.padding(15.dp)) {
-                    Text("COBROS DIGITALES", style = MaterialTheme.typography.labelSmall, color = Muted)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SummaryRow("Fondo inicial en Caja", formatMoney(jornada.openingCash))
+                    SummaryRow("Cobros en efectivo", formatMoney(cashSales + cashAbonos))
+                    SummaryRow("Compras", "− ${formatMoney(cashPurchases)}")
+                    SummaryRow("Gastos", "− ${formatMoney(cashExpenses)}")
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 9.dp)
+                            .background(Color(0xFFEDF2E4), RoundedCornerShape(11.dp))
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Fondo de caja sobrante", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                IconButton(onClick = { helpKey = "expected" }, modifier = Modifier.size(36.dp)) {
+                                    Icon(imageVector = Icons.Outlined.Info, contentDescription = null, tint = Muted)
+                                }
+                            }
+                            Text(formatMoney(expectedCash), style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp), fontWeight = FontWeight.Black)
+                        }
+                    }
+                    
                     SummaryRow("Yape", formatMoney(yapeTotal))
                     SummaryRow("Plin", formatMoney(plinTotal))
                     SummaryRow("Tarjeta", formatMoney(tarjetaTotal))
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(13.dp))
             
-            var showExpenseModal by remember { mutableStateOf(false) }
-            SecondaryButton(
+            var showExpenseDialog by remember { mutableStateOf(false) }
+            PrimaryButton(
                 text = "＋ Registrar gasto",
-                onClick = { showExpenseModal = true },
-                modifier = Modifier.fillMaxWidth()
+                onClick = { showExpenseDialog = true },
+                color = Amber,
+                contentColor = Color(0xFF45391F)
             )
 
-            if (showExpenseModal) {
-                ExpenseModal(viewModel = viewModel, onDismiss = { showExpenseModal = false })
+            if (showExpenseDialog) {
+                ExpenseDialog(
+                    onDismiss = { showExpenseDialog = false },
+                    onConfirm = { concept, amount ->
+                        viewModel.registerExpense(concept, amount)
+                        showExpenseDialog = false
+                    }
+                )
             }
 
-            Text("Cerrar jornada", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 22.dp, horizontal = 0.dp))
+            Text("Cerrar jornada", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 22.dp, bottom = 13.dp))
 
-            CerrarCajaForm(viewModel, expectedCash, safeConfig.bottlesPerPack)
+            CerrarCajaForm(viewModel, expectedCash, safeConfig.bottlesPerPack, onHelpRequest = { helpKey = it })
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
+        
+        Spacer(modifier = Modifier.height(24.dp))
         SecondaryButton(
-            text = "Cierres registrados",
+            text = "Ver cierres registrados",
             onClick = { navController.navigate(Screen.Cierres.route) },
             modifier = Modifier.fillMaxWidth()
         )
     }
+
+    helpKey?.let { key ->
+        HelpDefinitions.definitions[key]?.let { info ->
+            HelpDialog(
+                title = info.title,
+                description = info.description,
+                onDismiss = { helpKey = null }
+            )
+        }
+    }
 }
 
 @Composable
-fun AbrirCajaForm(viewModel: BusinessViewModel) {
+fun AbrirCajaForm(viewModel: BusinessViewModel, onHelpRequest: (String) -> Unit) {
     var date by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) }
     var openingCashText by remember { mutableStateOf("") }
     
     Card(
         colors = CardDefaults.cardColors(containerColor = White),
         border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(17.dp)
     ) {
-        Column(modifier = Modifier.padding(15.dp)) {
-            Text("Abrir jornada", fontWeight = FontWeight.Bold, color = Ink)
-            Spacer(modifier = Modifier.height(12.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Abrir jornada", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Ink)
+            Spacer(modifier = Modifier.height(13.dp))
             
-            Text("Fecha", style = MaterialTheme.typography.labelSmall)
-            TextField(
-                value = date,
-                onValueChange = { date = it },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(focusedContainerColor = White, unfocusedContainerColor = White)
-            )
+            Text("Fecha", style = MaterialTheme.typography.labelMedium)
+            MoneyField(value = date, onValueChange = { date = it }, placeholder = "YYYY-MM-DD")
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("Efectivo inicial · S/", style = MaterialTheme.typography.labelSmall)
-            TextField(
+            Spacer(modifier = Modifier.height(13.dp))
+            LabelWithHelp(label = "Fondo inicial en Caja", helpKey = "opening", onHelpClick = onHelpRequest)
+            MoneyField(
                 value = openingCashText,
-                onValueChange = { openingCashText = it },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = TextFieldDefaults.colors(focusedContainerColor = White, unfocusedContainerColor = White)
+                onValueChange = { openingCashText = it }
             )
 
-            Spacer(modifier = Modifier.height(15.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             PrimaryButton(
                 text = "Abrir caja",
                 onClick = {
@@ -177,27 +204,37 @@ fun AbrirCajaForm(viewModel: BusinessViewModel) {
 }
 
 @Composable
-fun ExpenseModal(viewModel: BusinessViewModel, onDismiss: () -> Unit) {
+fun ExpenseDialog(onDismiss: () -> Unit, onConfirm: (String, Long) -> Unit) {
     var concept by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
-    
+
     ConfirmDialog(
         title = "Registrar gasto",
         content = {
             Column {
-                Text("Concepto", style = MaterialTheme.typography.labelSmall)
-                TextField(value = concept, onValueChange = { concept = it }, modifier = Modifier.fillMaxWidth())
+                Text("Concepto", style = MaterialTheme.typography.labelMedium)
+                TextField(
+                    value = concept,
+                    onValueChange = { concept = it },
+                    modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFD0DBC6), RoundedCornerShape(11.dp)),
+                    shape = RoundedCornerShape(11.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
                 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Importe en efectivo · S/", style = MaterialTheme.typography.labelSmall)
-                TextField(value = amountText, onValueChange = { amountText = it }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                Text("Importe · S/", style = MaterialTheme.typography.labelMedium)
+                MoneyField(value = amountText, onValueChange = { amountText = it })
             }
         },
         onConfirm = {
             val amount = amountText.toDoubleOrNull()?.let { (it * 100).toLong() } ?: 0L
             if (concept.isNotBlank() && amount > 0) {
-                viewModel.registerExpense(concept, amount)
-                onDismiss()
+                onConfirm(concept, amount)
             }
         },
         onCancel = onDismiss
@@ -205,7 +242,7 @@ fun ExpenseModal(viewModel: BusinessViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun CerrarCajaForm(viewModel: BusinessViewModel, expectedCash: Long, packSize: Int) {
+fun CerrarCajaForm(viewModel: BusinessViewModel, expectedCash: Long, packSize: Int, onHelpRequest: (String) -> Unit) {
     var countedCashText by remember { mutableStateOf("") }
     var boxes by remember { mutableStateOf(0) }
     var units by remember { mutableStateOf(0) }
@@ -215,25 +252,15 @@ fun CerrarCajaForm(viewModel: BusinessViewModel, expectedCash: Long, packSize: I
     Card(
         colors = CardDefaults.cardColors(containerColor = White),
         border = androidx.compose.foundation.BorderStroke(1.dp, Line),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(17.dp)
     ) {
-        Column(modifier = Modifier.padding(15.dp)) {
-            Text("Efectivo contado · S/", style = MaterialTheme.typography.labelSmall)
-            TextField(
-                value = countedCashText,
-                onValueChange = { countedCashText = it },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = TextFieldDefaults.colors(focusedContainerColor = White, unfocusedContainerColor = White)
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Efectivo contado · S/", style = MaterialTheme.typography.labelMedium)
+            MoneyField(value = countedCashText, onValueChange = { countedCashText = it })
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    StepperField(label = "Cajas físicas", value = boxes, onValueChange = { boxes = it })
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    StepperField(label = "Botellas sueltas", value = units, onValueChange = { units = it })
-                }
+                StepperField(label = "Cajas físicas", value = boxes, onValueChange = { boxes = it }, modifier = Modifier.weight(1f))
+                StepperField(label = "Botellas sueltas", value = units, onValueChange = { units = it }, modifier = Modifier.weight(1f))
             }
 
             val countedCash = countedCashText.toDoubleOrNull()?.let { (it * 100).toLong() } ?: 0L
@@ -243,31 +270,38 @@ fun CerrarCajaForm(viewModel: BusinessViewModel, expectedCash: Long, packSize: I
             
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF0DC)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                shape = RoundedCornerShape(13.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp)
             ) {
                 Text(
                     text = "Diferencia de efectivo: ${formatMoney(diffCash)} · Diferencia de stock: $diffStock botellas.",
-                    modifier = Modifier.padding(13.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Ink
+                    modifier = Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Ink,
+                    lineHeight = 22.sp
                 )
             }
 
-            Text("Observaciones", style = MaterialTheme.typography.labelSmall)
+            Text("Observaciones", style = MaterialTheme.typography.labelMedium)
             TextField(
                 value = note,
                 onValueChange = { note = it },
                 placeholder = { Text("Obligatorias si existen diferencias") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(focusedContainerColor = White, unfocusedContainerColor = White)
+                modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFD0DBC6), RoundedCornerShape(11.dp)),
+                shape = RoundedCornerShape(11.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = White,
+                    unfocusedContainerColor = White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
             )
 
             val canClose = countedCashText.isNotBlank() && ( (diffCash == 0L && diffStock == 0) || note.isNotBlank() )
 
-            Spacer(modifier = Modifier.height(15.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             PrimaryButton(
-                text = "Revisar cierre",
+                text = "Cerrar jornada",
                 enabled = canClose,
                 onClick = {
                     viewModel.closeJornada(countedCash, boxes, units, note)

@@ -3,6 +3,7 @@ package com.dlcode.chelasapp.repository
 import com.dlcode.chelasapp.data.BusinessDao
 import com.dlcode.chelasapp.model.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,8 +33,15 @@ class BusinessRepository(private val dao: BusinessDao) {
         dao.upsertJornada(jornada)
     }
 
+    suspend fun getJornadaByDate(date: String): Jornada? = dao.getJornadaByDate(date)
+
     suspend fun registerSale(venta: Venta) {
-        dao.insertSale(venta)
+        dao.upsertSale(venta)
+    }
+
+    suspend fun updateSaleWithAudit(venta: Venta, audit: SaleAudit) {
+        dao.upsertSale(venta)
+        dao.insertAudit(audit)
     }
 
     suspend fun registerPurchase(compra: Compra) {
@@ -49,7 +57,7 @@ class BusinessRepository(private val dao: BusinessDao) {
     }
 
     suspend fun registerNote(apunte: Apunte) {
-        dao.insertNote(apunte)
+        dao.upsertNote(apunte)
     }
 
     suspend fun closeJornada(
@@ -84,4 +92,8 @@ class BusinessRepository(private val dao: BusinessDao) {
     fun getSalesByDate(date: String): Flow<List<Venta>> = dao.getSalesByDate(date)
     
     fun getAbonosForSale(saleId: Long): Flow<List<Abono>> = dao.getAbonosForSale(saleId)
+
+    suspend fun getSaleById(id: Long): Venta? = dao.getSaleById(id)
+
+    fun getAuditsForSale(saleId: Long): Flow<List<SaleAudit>> = dao.getAuditsForSale(saleId)
 }

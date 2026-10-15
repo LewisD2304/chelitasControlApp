@@ -4,25 +4,23 @@ data class HelpInfo(val title: String, val description: String)
 
 object HelpDefinitions {
     val definitions = mapOf(
-        "sales" to HelpInfo("Ventas netas", "Total vendido después de promociones y descuentos. Incluye fiados; no equivale a dinero cobrado."),
-        "boxes" to HelpInfo("Cajas vendidas", "Cajas completas registradas. Las botellas sueltas no se convierten en cajas en este indicador."),
-        "bottles" to HelpInfo("Botellas sueltas", "Botellas vendidas fuera de las cajas, incluidas las que participan en promociones."),
-        "units" to HelpInfo("Total de botellas", "Cajas × botellas por caja + botellas sueltas. Incluye todo lo entregado."),
-        "gross" to HelpInfo("Utilidad bruta", "Ventas netas − costo de la cerveza vendida. Todavía no descuenta gastos."),
-        "result" to HelpInfo("Resultado estimado", "Ventas netas − costo vendido − gastos registrados. Es distinto al efectivo disponible."),
-        "expenses" to HelpInfo("Gastos", "Pagos de operación como hielo o transporte. Comprar cerveza se registra como compra de inventario."),
-        "stock" to HelpInfo("Stock disponible", "Botellas disponibles agrupadas en cajas y sueltas. Es una equivalencia; no identifica cajas selladas ni temperatura."),
-        "stockcost" to HelpInfo("Valor al costo", "Stock disponible × costo promedio por botella. No es el precio de venta."),
-        "average" to HelpInfo("Costo promedio", "(Valor del stock anterior + costo de compra) ÷ botellas disponibles después de la compra."),
-        "opening" to HelpInfo("Efectivo inicial", "Dinero físico al abrir la jornada. No cuenta como venta ni ganancia."),
-        "expected" to HelpInfo("Efectivo esperado", "Fondo inicial + cobros en efectivo − compras en efectivo − gastos. No incluye pagos digitales."),
-        "digital" to HelpInfo("Cobros digitales", "Cobros recibidos por Yape, Plin o tarjeta, incluidos abonos. No se suman al efectivo físico."),
-        "credit" to HelpInfo("Fiados", "Ventas pendientes de cobro. Restan stock pero no generan dinero hasta registrar abonos."),
-        "collection" to HelpInfo("Abonos", "Cobros de deudas: reducen el saldo y aumentan los cobros sin generar otra venta."),
-        "promo" to HelpInfo("Promoción", "Cada grupo completo de botellas sueltas usa la promoción; las restantes usan precio unitario. Las cajas tienen precio independiente."),
-        "discount" to HelpInfo("Descuento adicional", "Rebaja extra después de la promoción automática. No registres de nuevo el ahorro de la promoción."),
-        "received" to HelpInfo("Efectivo recibido", "Dinero entregado por el cliente. Vuelto = recibido − total. La caja aumenta solo por el total de la venta."),
-        "purchase" to HelpInfo("Costo de compra", "Importe pagado por toda la cerveza ingresada, sin depósitos de envases. Aumenta inventario y reduce efectivo."),
-        "pack" to HelpInfo("Botellas por caja", "Cantidad real que contiene una caja de tu presentación. Se usa para convertir cajas en botellas.")
+        "sales" to HelpInfo("Ventas netas", "Es toda la platita de las ventas de hoy que no has anulado. Aquí sumamos todo: lo que te pagaron en efectivo, por Yape, Plin y hasta lo que has dejado fiado."),
+        "boxes" to HelpInfo("Cajas vendidas", "Son las cajas cerraditas de 12 botellas que ya entregaste. Las botellas que vendiste sueltas no se cuentan aquí."),
+        "bottles" to HelpInfo("Botellas sueltas", "Son las botellas que vendiste una por una. También cuentan las que vendiste en oferta (como las de 3 por 20 soles)."),
+        "units" to HelpInfo("Botellas entregadas", "Es el total de botellas que salieron de tu local hoy. Sumamos las que iban en cajas y las unidades sueltas."),
+        "result" to HelpInfo("Ganancia estimada", "Es lo que te queda 'limpio' en el bolsillo. Agarramos tus ventas, le quitamos lo que te costó la cerveza y también restamos tus gastos (como el hielo o los pasajes)."),
+        "gross" to HelpInfo("Utilidad bruta", "Es lo que ganas solo por vender la cerveza, sin contar todavía los gastos extra."),
+        "expenses" to HelpInfo("Gastos registrados", "Pagos que hiciste hoy para que el negocio funcione, como comprar hielo, pagar transporte o limpieza."),
+        "stock" to HelpInfo("Stock disponible", "Es la cantidad de cerveza que tienes guardada ahorita mismo para vender, contada en cajas y botellas."),
+        "stockcost" to HelpInfo("Inversión en stock", "Es cuánta plata tienes 'amarrada' en la cerveza que todavía no vendes."),
+        "opening" to HelpInfo("Fondo inicial en Caja", "Es el sencillo con el que empezaste el día para poder dar vuelto. No es una ganancia, es tu base."),
+        "expected" to HelpInfo("Fondo de caja sobrante", "Es la plata que debería haber en tu cajón ahorita: lo que había al inicio + ventas y abonos en efectivo - compras y gastos pagados en efectivo."),
+        "promo" to HelpInfo("Ofertas", "Son los precios especiales que el sistema pone solito cuando vendes varias botellas juntas para que salgan más rápido."),
+        "discount" to HelpInfo("Descuento extra", "Es una rebajita adicional que tú decides hacerle al cliente al momento de cobrarle."),
+        "purchase" to HelpInfo("Costo de compra", "Es lo que te cobraron por el lote de cerveza que estás metiendo a tu almacén. Se paga con la plata de la caja."),
+        "quantity" to HelpInfo("Cantidades", "Usa los botones + y - para marcar cuántas cajas o botellas estás moviendo. Solo números enteros."),
+        "edit" to HelpInfo("Correcciones", "Si te equivocaste al marcar, puedes arreglarlo siempre que la caja siga abierta. Guardamos un registro de los cambios por seguridad."),
+        "credit" to HelpInfo("Fiados", "Cerveza que ya entregaste pero que el cliente todavía te debe. Cuando te den un adelanto, regístralo como 'Abono' para bajar su deuda."),
+        "note" to HelpInfo("Mis apuntes", "Son recordatorios virtuales para que no se te olvide nada importante. No afectan tus cuentas de dinero ni tu inventario.")
     )
 }

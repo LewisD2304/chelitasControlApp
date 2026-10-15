@@ -1,6 +1,7 @@
 package com.dlcode.chelasapp.ui.navigation
 
 sealed class Screen(val route: String, val title: String) {
+    object Splash : Screen("splash", "")
     object Inicio : Screen("inicio", "Mi resumen")
     object Vender : Screen("vender", "Nueva venta")
     object Stock : Screen("stock", "Mi inventario")
